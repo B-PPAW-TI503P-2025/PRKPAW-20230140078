@@ -1,4 +1,4 @@
-const presensiRecords = require("../data/presensiData");
+const {Presensi} = require("../models");
 exports.getDailyReport = (req, res) => {
   console.log("Controller: Mengambil data laporan harian dari array...");
   res.json({
