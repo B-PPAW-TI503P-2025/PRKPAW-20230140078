@@ -124,34 +124,42 @@ exports.deletePresensi = async (req, res) => {
 };
 
 exports.updatePresensi = async (req, res) => {
-  try {
-    const presensiId = req.params.id;
-    const { checkIn, checkOut, nama } = req.body;
-    if (checkIn === undefined && checkOut === undefined && nama === undefined) {
-      return res.status(400).json({
-        message:
-          "Request body tidak berisi data yang valid untuk diupdate (checkIn, checkOut, atau nama).",
-      });
-    }
-    const recordToUpdate = await Presensi.findByPk(presensiId);
-    if (!recordToUpdate) {
-      return res
-        .status(404)
-        .json({ message: "Catatan presensi tidak ditemukan." });
-    }
+    try {
+        // 1. Cek Hasil Validasi dari express-validator
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                message: "Validasi Gagal.",
+                errors: errors.array() // Kirim kembali semua error
+            });
+        }
+        
+        // ... (lanjutan kode update yang sudah Anda buat) ...
+        const presensiId = req.params.id;
+        const { checkIn, checkOut, nama } = req.body;
+        
+        // Pengecekan body kosong (tetap pertahankan)
+        if (checkIn === undefined && checkOut === undefined && nama === undefined) {
+             return res.status(400).json({
+                 message: "Request body tidak berisi data yang valid untuk diupdate (checkIn, checkOut, atau nama).",
+             });
+        }
+        
+        const recordToUpdate = await Presensi.findByPk(presensiId);
+        // ... (Logika update data dan save) ...
+        
+        recordToUpdate.checkIn = checkIn || recordToUpdate.checkIn;
+        recordToUpdate.checkOut = checkOut || recordToUpdate.checkOut;
+        recordToUpdate.nama = nama || recordToUpdate.nama;
+        await recordToUpdate.save();
 
-    recordToUpdate.checkIn = checkIn || recordToUpdate.checkIn;
-    recordToUpdate.checkOut = checkOut || recordToUpdate.checkOut;
-    recordToUpdate.nama = nama || recordToUpdate.nama;
-    await recordToUpdate.save();
+        res.json({
+            message: "Data presensi berhasil diperbarui.",
+            data: recordToUpdate,
+        });
 
-    res.json({
-      message: "Data presensi berhasil diperbarui.",
-      data: recordToUpdate,
-    });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Terjadi kesalahan pada server", error: error.message });
-  }
+    } catch (error) {
+        // ... (Error handling) ...
+        res.status(500).json({ message: "Terjadi kesalahan pada server", error: error.message });
+    }
 };
