@@ -1,28 +1,27 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
+import DashboardPage from './components/DashboardPage';
 
 function App() {
-  // Definisikan state untuk menyimpan input nama
-  const [name, setName] = useState(''); 
-
-  // Handler untuk memperbarui state setiap kali input diubah
-  const handleNameChange = (event) => {
-    setName(event.target.value); 
-  };
-
   return (
-    <div>
-      {/* Ini adalah bagian yang menyelesaikan Tugas 1: Menampilkan Hello, [nama]! */}
-      <h1>Hello, {name || '[nama]'}!</h1> 
-      
-      <p>Masukkan nama Anda:</p>
-      <input
-        type="text"
-        value={name}
-        onChange={handleNameChange} // Hubungkan input dengan handler
-        placeholder="Ketik nama di sini"
-      />
-    </div>
+    <Router>
+      <div>
+        {/* Navigasi ini bisa dihapus jika tidak diperlukan */}
+        <nav className="p-4 bg-gray-100">
+          <Link to="/login" className="mr-4">Login</Link>
+          <Link to="/register">Register</Link>
+        </nav>
+
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/" element={<LoginPage />} /> 
+        </Routes>
+      </div>
+    </Router>
   );
 }
-
 export default App;
