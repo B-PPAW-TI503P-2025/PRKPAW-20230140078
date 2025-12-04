@@ -3,25 +3,46 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import DashboardPage from './components/DashboardPage';
+import PresensiPage from './components/PresensiPage';
+import ReportPage from './components/ReportPage';
+import Navbar from './components/Navbar';
 
 function App() {
-  return (
-    <Router>
-      <div>
-        {/* Navigasi ini bisa dihapus jika tidak diperlukan */}
-        <nav className="p-4 bg-gray-100">
-          <Link to="/login" className="mr-4">Login</Link>
-          <Link to="/register">Register</Link>
-        </nav>
-
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/" element={<LoginPage />} /> 
-        </Routes>
+  const Layout = ({ children }) => (
+    <>
+      <Navbar />
+      <div className="pt-16">
+          {children}
       </div>
-    </Router>
+    </>
   );
+
+  // Komponen Layout tanpa Navbar (untuk halaman publik)
+  const NoNavbarLayout = ({ children }) => (
+    <div className="min-h-screen">
+      {children}
+    </div>
+  );
+
+  return (
+    <Router>
+      <div>
+        {/* Navigasi ini bisa dihapus jika tidak diperlukan */}
+        <nav className="p-4 bg-gray-100">
+          <Link to="/login" className="mr-4">Login</Link>
+          <Link to="/register">Register</Link>
+        </nav>
+
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />           
+          <Route path="/register" element={<RegisterPage />} />       
+          <Route path="/dashboard" element={<DashboardPage />} />     
+          <Route path="/" element={<LoginPage />} />                  
+          <Route path="/presensi" element={<PresensiPage />} />      
+          <Route path="/reports" element={<ReportPage />} />          
+        </Routes>
+      </div>
+    </Router>
+  );
 }
 export default App;

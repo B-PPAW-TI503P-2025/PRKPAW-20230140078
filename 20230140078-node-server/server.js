@@ -3,6 +3,7 @@ const cors = require("cors");
 const app = express();
 const PORT = 3001;
 const morgan = require("morgan");
+require("dotenv").config();
 
 // Impor router
 const presensiRoutes = require("./routes/presensi");

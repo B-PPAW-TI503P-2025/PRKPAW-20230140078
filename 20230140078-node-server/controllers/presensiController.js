@@ -1,15 +1,15 @@
-// 1. Ganti sumber data dari array ke model Sequelize
 const { Presensi } = require("../models");
 const { format } = require("date-fns-tz");
+const { validationResult } = require('express-validator'); 
 const timeZone = "Asia/Jakarta";
 
-exports.CheckIn = async (req, res) => {
-  // 2. Gunakan try...catch untuk error handling
+// 1. CheckIn (Saya ubah jadi Huruf Besar 'C' agar terbaca di Route)
+const CheckIn = async (req, res) => {
   try {
     const { id: userId, nama: userName } = req.user;
     const waktuSekarang = new Date();
+    const { latitude, longitude } = req.body;
 
-    // 3. Ubah cara mencari data menggunakan 'findOne' dari Sequelize
     // Mencari catatan presensi aktif (checkOut: null)
     const existingRecord = await Presensi.findOne({
       where: { userId: userId, checkOut: null },
@@ -21,11 +21,13 @@ exports.CheckIn = async (req, res) => {
         .json({ message: "Anda sudah melakukan check-in hari ini." });
     }
 
-    // 4. Ubah cara membuat data baru menggunakan 'create' dari Sequelize
+    // Membuat data baru
     const newRecord = await Presensi.create({
       userId: userId,
       nama: userName,
       checkIn: waktuSekarang,
+      latitude: latitude || null,
+      longitude: longitude || null
     });
     
     const formattedData = {
@@ -48,13 +50,12 @@ exports.CheckIn = async (req, res) => {
   }
 };
 
-exports.CheckOut = async (req, res) => {
-  // Gunakan try...catch
+// 2. CheckOut
+const CheckOut = async (req, res) => {
   try {
     const { id: userId, nama: userName } = req.user;
     const waktuSekarang = new Date();
 
-    // Cari data di database
     const recordToUpdate = await Presensi.findOne({
       where: { userId: userId, checkOut: null },
     });
@@ -65,7 +66,6 @@ exports.CheckOut = async (req, res) => {
       });
     }
 
-    // 5. Update dan simpan perubahan ke database
     recordToUpdate.checkOut = waktuSekarang;
     await recordToUpdate.save();
 
@@ -89,13 +89,12 @@ exports.CheckOut = async (req, res) => {
   }
 };
 
-// 👇 FUNGSI INI SUDAH DIPINDAHKAN KE LUAR exports.CheckOut
-exports.deletePresensi = async (req, res) => {
+// 3. Delete Presensi
+const deletePresensi = async (req, res) => {
   try {
     const { id: userId } = req.user;
     const presensiId = req.params.id;
     
-    // Cari presensi berdasarkan Primary Key (ID)
     const recordToDelete = await Presensi.findByPk(presensiId);
 
     if (!recordToDelete) {
@@ -104,17 +103,14 @@ exports.deletePresensi = async (req, res) => {
         .json({ message: "Catatan presensi tidak ditemukan." });
     }
     
-    // Cek otorisasi: hanya pemilik catatan yang boleh menghapus
     if (recordToDelete.userId !== userId) {
-      	return res
-    		 .status(403)
-        	 .json({ message: "Akses ditolak: Anda bukan pemilik catatan ini." });
+        return res
+         .status(403)
+           .json({ message: "Akses ditolak: Anda bukan pemilik catatan ini." });
     }
     
-    // Hapus catatan
     await recordToDelete.destroy();
     
-    // 204 No Content untuk operasi penghapusan yang berhasil
     res.status(204).send(); 
   } catch (error) {
     res
@@ -123,31 +119,33 @@ exports.deletePresensi = async (req, res) => {
   }
 };
 
-exports.updatePresensi = async (req, res) => {
+// 4. Update Presensi
+const updatePresensi = async (req, res) => {
     try {
-        // 1. Cek Hasil Validasi dari express-validator
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({
                 message: "Validasi Gagal.",
-                errors: errors.array() // Kirim kembali semua error
+                errors: errors.array() 
             });
         }
         
-        // ... (lanjutan kode update yang sudah Anda buat) ...
         const presensiId = req.params.id;
         const { checkIn, checkOut, nama } = req.body;
         
-        // Pengecekan body kosong (tetap pertahankan)
         if (checkIn === undefined && checkOut === undefined && nama === undefined) {
              return res.status(400).json({
-                 message: "Request body tidak berisi data yang valid untuk diupdate (checkIn, checkOut, atau nama).",
+                 message: "Request body tidak berisi data yang valid untuk diupdate.",
              });
         }
         
         const recordToUpdate = await Presensi.findByPk(presensiId);
-        // ... (Logika update data dan save) ...
         
+        // Cek jika record tidak ditemukan (Penting!)
+        if (!recordToUpdate) {
+            return res.status(404).json({ message: "Data tidak ditemukan" });
+        }
+
         recordToUpdate.checkIn = checkIn || recordToUpdate.checkIn;
         recordToUpdate.checkOut = checkOut || recordToUpdate.checkOut;
         recordToUpdate.nama = nama || recordToUpdate.nama;
@@ -159,7 +157,13 @@ exports.updatePresensi = async (req, res) => {
         });
 
     } catch (error) {
-        // ... (Error handling) ...
         res.status(500).json({ message: "Terjadi kesalahan pada server", error: error.message });
     }
+};
+
+module.exports = {
+    CheckIn,
+    CheckOut,
+    deletePresensi,
+    updatePresensi
 };
