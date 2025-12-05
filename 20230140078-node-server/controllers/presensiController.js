@@ -2,6 +2,28 @@ const { Presensi } = require("../models");
 const { format } = require("date-fns-tz");
 const { validationResult } = require('express-validator'); 
 const timeZone = "Asia/Jakarta";
+const multer = require('multer');
+const path = require('path');
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/'); 
+  },
+  filename: (req, file, cb) => {
+    // Format nama file: userId-timestamp.jpg
+    cb(null, `${req.user.id}-${Date.now()}${path.extname(file.originalname)}`);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Hanya file gambar yang diperbolehkan!'), false);
+  }
+};
+
+exports.upload = multer({ storage: storage, fileFilter: fileFilter });
 
 // 1. CheckIn (Saya ubah jadi Huruf Besar 'C' agar terbaca di Route)
 const CheckIn = async (req, res) => {
@@ -9,6 +31,7 @@ const CheckIn = async (req, res) => {
     const { id: userId, nama: userName } = req.user;
     const waktuSekarang = new Date();
     const { latitude, longitude } = req.body;
+    const buktiFoto = req.file ? req.file.path : null;
 
     // Mencari catatan presensi aktif (checkOut: null)
     const existingRecord = await Presensi.findOne({
@@ -27,8 +50,11 @@ const CheckIn = async (req, res) => {
       nama: userName,
       checkIn: waktuSekarang,
       latitude: latitude || null,
-      longitude: longitude || null
+      longitude: longitude || null,
+      buktiFoto: buktiFoto
     });
+
+    
     
     const formattedData = {
         userId: newRecord.userId,
@@ -162,6 +188,7 @@ const updatePresensi = async (req, res) => {
 };
 
 module.exports = {
+    upload: exports.upload,
     CheckIn,
     CheckOut,
     deletePresensi,
