@@ -1,18 +1,14 @@
+// File: models/presensi.js
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Presensi extends Model {
-    
     static associate(models) {
-      // Implementasi relasi Presensi.belongsTo(User)
-      Presensi.belongsTo(models.User, {
-        foreignKey: 'userId',
-        as: 'user' // Alias untuk join
-      });
+      Presensi.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
     }
   }
+  
   Presensi.init({
     userId: {
       type: DataTypes.INTEGER,
@@ -24,19 +20,26 @@ module.exports = (sequelize, DataTypes) => {
     },
     checkOut: {
       type: DataTypes.DATE,
-      allowNull: true, // Boleh null
+      allowNull: true,
     },
     latitude: {
-        type: DataTypes.DECIMAL(10, 7),
-        allowNull: false,
-      },
-      longitude: {
-        type: DataTypes.DECIMAL(10, 7),
-        allowNull: false,
-      },
+      type: DataTypes.DECIMAL(10, 7),
+      allowNull: false,
+    },
+    longitude: {
+      type: DataTypes.DECIMAL(10, 7),
+      allowNull: false,
+    },
+    // 👇👇👇 TAMBAHKAN BAGIAN INI AGAR DATABASE MENYIMPAN NAMA FOTO 👇👇👇
+    buktiFoto: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    // 👆👆👆 SAMPAI SINI 👆👆👆
   }, {
     sequelize,
     modelName: 'Presensi',
   });
+  
   return Presensi;
 };

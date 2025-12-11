@@ -1,53 +1,50 @@
 // controllers/reportController.js
 
-const { Presensi } = require('../models');
-const { Op } = require('sequelize'); // Pastikan ini diimpor
+const { Presensi, User } = require('../models'); // Tambahkan User jika perlu include
+const { Op } = require('sequelize');
 const { format } = require('date-fns-tz');
 const timeZone = "Asia/Jakarta";
 
 exports.getDailyReport = async (req, res) => {
     try {
-        const { nama, tanggalMulai, tanggalSelesai } = req.query; // Ambil parameter baru
+        const { nama, tanggalMulai, tanggalSelesai } = req.query;
         
         let options = {
+            include: [{ model: User, as: 'user', attributes: ['nama'] }], // Include User agar data user lengkap
             where: {},
             order: [['checkIn', 'DESC']]
         };
 
-        // 1. Logika Filter Berdasarkan Nama (Sudah ada dari praktikum)
+        // 1. Filter Nama
         if (nama) {
-            options.where.nama = {
-                [Op.like]: `%${nama}%`,
-            };
+            options.where.nama = { [Op.like]: `%${nama}%` };
         }
 
-        // 2. Logika Filter Berdasarkan Rentang Tanggal (TUGAS BARU)
+        // 2. Filter Tanggal
         if (tanggalMulai && tanggalSelesai) {
-            // Kita akan memfilter kolom checkIn yang berada di antara tanggal mulai dan selesai
-            // Tambahkan 1 hari ke tanggalSelesai untuk mencakup seluruh hari terakhir
             const endDate = new Date(tanggalSelesai);
             endDate.setDate(endDate.getDate() + 1); 
-
             options.where.checkIn = {
-                [Op.between]: [
-                    new Date(tanggalMulai),
-                    endDate 
-                ]
+                [Op.between]: [new Date(tanggalMulai), endDate]
             };
         }
-        
-        // Jika tidak ada filter yang diberikan, default-nya akan mengambil semua (atau Anda bisa set default ke hari ini)
 
         const records = await Presensi.findAll(options);
 
-        // ... (Logika format data) ...
+        // --- BAGIAN INI YANG DIPERBAIKI ---
         const formattedReport = records.map(record => ({
-            // ... (format data seperti yang sudah Anda buat) ...
+            id: record.id,
             userId: record.userId,
             nama: record.nama,
-            checkIn: format(record.checkIn, "yyyy-MM-dd HH:mm:ss", { timeZone }),
-            checkOut: record.checkOut ? format(record.checkOut, "yyyy-MM-dd HH:mm:ss", { timeZone }) : 'N/A'
+            // TAMBAHAN WAJIB AGAR FOTO MUNCUL:
+            buktiFoto: record.buktiFoto, 
+            latitude: record.latitude,
+            longitude: record.longitude,
+            // Format Tanggal
+            checkIn: record.checkIn, // Kirim raw date agar bisa diolah frontend, atau format string
+            checkOut: record.checkOut
         }));
+        // ----------------------------------
 
         res.status(200).json({
             message: "Laporan presensi berhasil diambil.",
@@ -56,7 +53,7 @@ exports.getDailyReport = async (req, res) => {
         });
 
     } catch (error) {
-        // ... (Error handling) ...
+        console.error(error);
         res.status(500).json({ message: "Gagal mengambil laporan", error: error.message });
     }
 };

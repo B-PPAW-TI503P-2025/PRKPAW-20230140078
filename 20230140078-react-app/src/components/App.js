@@ -1,57 +1,39 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import LoginPage from "./components/LoginPage";
-import RegisterPage from "./components/RegisterPage";
-import DashboardPage from "./components/DashboardPage";
-import AttendancePage from "./components/AttendancePage";
-import ReportPage from "./components/ReportPage";
-import Navbar from "./components/Navbar";
-import "leaflet/dist/leaflet.css";
-
-const MainLayout = ({ children }) => {
-  return (
-    <div>
-      <Navbar />
-      <main>{children}</main>
-    </div>
-  );
-};
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
+import DashboardPage from './components/DashboardPage';
+import PresensiPage from './components/PresensiPage';
+import ReportPage from './components/ReportPage';
+import Navbar from './components/Navbar';
 
 function App() {
+  // Layout khusus untuk halaman yang butuh Navbar (Dashboard, Presensi, Report)
+  const ProtectedLayout = ({ children }) => (
+    <>
+      <Navbar />
+      <div className="pt-20 container mx-auto p-4">
+          {children}
+      </div>
+    </>
+  );
+
   return (
     <Router>
-      <div>
-        <Routes>
+       <Routes>
+          {/* Halaman Publik (Tanpa Navbar) */}
+          <Route path="/" element={<LoginPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <MainLayout>
-                <DashboardPage />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/attendance"
-            element={
-              <MainLayout>
-                <AttendancePage />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/reports"
-            element={
-              <MainLayout>
-                <ReportPage />
-              </MainLayout>
-            }
-          />
-          <Route path="/" element={<LoginPage />} />
-        </Routes>
-      </div>
+
+          {/* Halaman Dalam (Pakai Navbar) */}
+          {/* Perhatikan cara pembungkusannya di bawah ini: */}
+          <Route path="/dashboard" element={<ProtectedLayout><DashboardPage /></ProtectedLayout>} />
+          <Route path="/presensi" element={<ProtectedLayout><PresensiPage /></ProtectedLayout>} />
+          <Route path="/reports" element={<ProtectedLayout><ReportPage /></ProtectedLayout>} />
+       </Routes>
     </Router>
   );
 }
+
 export default App;

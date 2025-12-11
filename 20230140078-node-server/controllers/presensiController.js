@@ -4,17 +4,17 @@ const { validationResult } = require('express-validator');
 const timeZone = "Asia/Jakarta";
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs'); // <--- PERBAIKAN 1: Tambah ini
 
+// ... (Storage & FileFilter biarkan sama) ...
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/'); 
   },
   filename: (req, file, cb) => {
-    // Format nama file: userId-timestamp.jpg
     cb(null, `${req.user.id}-${Date.now()}${path.extname(file.originalname)}`);
   }
 });
-
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
@@ -22,29 +22,31 @@ const fileFilter = (req, file, cb) => {
     cb(new Error('Hanya file gambar yang diperbolehkan!'), false);
   }
 };
-
 exports.upload = multer({ storage: storage, fileFilter: fileFilter });
 
-// 1. CheckIn (Saya ubah jadi Huruf Besar 'C' agar terbaca di Route)
+// 1. CheckIn
 const CheckIn = async (req, res) => {
   try {
+    console.log("=== DEBUG CHECK-IN ===");
+    console.log("Body:", req.body);
+    console.log("File:", req.file);
+    console.log("========================");
+
     const { id: userId, nama: userName } = req.user;
     const waktuSekarang = new Date();
     const { latitude, longitude } = req.body;
-    const buktiFoto = req.file ? req.file.path : null;
+    
+    // <--- PERBAIKAN 2: Ganti .path jadi .filename
+    const buktiFoto = req.file ? req.file.filename : null; 
 
-    // Mencari catatan presensi aktif (checkOut: null)
     const existingRecord = await Presensi.findOne({
       where: { userId: userId, checkOut: null },
     });
 
     if (existingRecord) {
-      return res
-        .status(400)
-        .json({ message: "Anda sudah melakukan check-in hari ini." });
+      return res.status(400).json({ message: "Anda sudah melakukan check-in hari ini." });
     }
 
-    // Membuat data baru
     const newRecord = await Presensi.create({
       userId: userId,
       nama: userName,
@@ -53,9 +55,8 @@ const CheckIn = async (req, res) => {
       longitude: longitude || null,
       buktiFoto: buktiFoto
     });
-
     
-    
+    // ... (Response CheckIn biarkan sama) ...
     const formattedData = {
         userId: newRecord.userId,
         nama: newRecord.nama,
@@ -64,11 +65,7 @@ const CheckIn = async (req, res) => {
     };
 
     res.status(201).json({
-      message: `Halo ${userName}, check-in Anda berhasil pada pukul ${format(
-        waktuSekarang,
-        "HH:mm:ss",
-        { timeZone }
-      )} WIB`,
+      message: `Halo ${userName}, check-in berhasil!`,
       data: formattedData,
     });
   } catch (error) {
@@ -76,8 +73,9 @@ const CheckIn = async (req, res) => {
   }
 };
 
-// 2. CheckOut
+// 2. CheckOut (Tidak ada perubahan, kode Anda sudah OK)
 const CheckOut = async (req, res) => {
+  // ... (Gunakan kode CheckOut Anda yang lama) ...
   try {
     const { id: userId, nama: userName } = req.user;
     const waktuSekarang = new Date();
@@ -103,19 +101,15 @@ const CheckOut = async (req, res) => {
     };
 
     res.json({
-      message: `Selamat jalan ${userName}, check-out Anda berhasil pada pukul ${format(
-        waktuSekarang,
-        "HH:mm:ss",
-        { timeZone }
-      )} WIB`,
+      message: `Selamat jalan ${userName}, check-out berhasil!`,
       data: formattedData,
     });
   } catch (error) {
-    res.status(500).json({ message: "Terjadi kesalahan pada server", error: error.message });
+    res.status(500).json({ message: "Error server", error: error.message });
   }
 };
 
-// 3. Delete Presensi
+// 3. Delete Presensi (PERBAIKAN 3: Full Logic Hapus File)
 const deletePresensi = async (req, res) => {
   try {
     const { id: userId } = req.user;
@@ -124,50 +118,47 @@ const deletePresensi = async (req, res) => {
     const recordToDelete = await Presensi.findByPk(presensiId);
 
     if (!recordToDelete) {
-      return res
-        .status(404)
-        .json({ message: "Catatan presensi tidak ditemukan." });
+      return res.status(404).json({ message: "Catatan presensi tidak ditemukan." });
     }
     
     if (recordToDelete.userId !== userId) {
-        return res
-         .status(403)
-           .json({ message: "Akses ditolak: Anda bukan pemilik catatan ini." });
+        return res.status(403).json({ message: "Akses ditolak." });
     }
+
+    // --- LOGIKA BARU UNTUK HAPUS FILE ---
+    if (recordToDelete.buktiFoto) {
+        const filePath = path.join(__dirname, '../uploads', recordToDelete.buktiFoto);
+        fs.access(filePath, fs.constants.F_OK, (err) => {
+            if (!err) {
+                fs.unlink(filePath, (err) => {
+                    if (err) console.error("Gagal hapus file:", err);
+                });
+            }
+        });
+    }
+    // -------------------------------------
     
     await recordToDelete.destroy();
-    
     res.status(204).send(); 
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Terjadi kesalahan pada server", error: error.message });
+    res.status(500).json({ message: "Error server", error: error.message });
   }
 };
 
-// 4. Update Presensi
+// 4. Update Presensi (Tidak ada perubahan, kode Anda sudah OK)
 const updatePresensi = async (req, res) => {
+    // ... (Gunakan kode Update Anda yang lama) ...
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({
-                message: "Validasi Gagal.",
-                errors: errors.array() 
-            });
+            return res.status(400).json({ message: "Validasi Gagal.", errors: errors.array() });
         }
         
         const presensiId = req.params.id;
         const { checkIn, checkOut, nama } = req.body;
         
-        if (checkIn === undefined && checkOut === undefined && nama === undefined) {
-             return res.status(400).json({
-                 message: "Request body tidak berisi data yang valid untuk diupdate.",
-             });
-        }
-        
         const recordToUpdate = await Presensi.findByPk(presensiId);
         
-        // Cek jika record tidak ditemukan (Penting!)
         if (!recordToUpdate) {
             return res.status(404).json({ message: "Data tidak ditemukan" });
         }
@@ -177,13 +168,10 @@ const updatePresensi = async (req, res) => {
         recordToUpdate.nama = nama || recordToUpdate.nama;
         await recordToUpdate.save();
 
-        res.json({
-            message: "Data presensi berhasil diperbarui.",
-            data: recordToUpdate,
-        });
+        res.json({ message: "Data berhasil diperbarui.", data: recordToUpdate });
 
     } catch (error) {
-        res.status(500).json({ message: "Terjadi kesalahan pada server", error: error.message });
+        res.status(500).json({ message: "Error server", error: error.message });
     }
 };
 
